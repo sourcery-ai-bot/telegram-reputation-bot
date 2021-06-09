@@ -49,6 +49,7 @@ def session_scope():
 
 def vote(update: Update, context: CallbackContext):
     msg = update.message
+    print(msg.reply_to_message)
 
     if msg is None:
         return
@@ -77,9 +78,9 @@ def vote(update: Update, context: CallbackContext):
         with session_scope() as session:
             html_reply = vote_user(from_user_id, from_username, from_user_name,
                       to_user_id, to_username, to_user_name,
-                      group_id, msg.text, session)
-
-            show_voted_rep(html_reply, group_id, session, bot, update)
+                      group_id, msg.text, msg.reply_to_message.message_id, session)
+            if html_reply:
+                show_voted_rep(html_reply, group_id, session, bot, update)
 
 
 

@@ -61,6 +61,7 @@ class UserVotes(Base):
 
     from_user_id = Column(BigInteger, nullable=False)
     to_user_id = Column(BigInteger, nullable=False)
+    message_id = Column(BigInteger, nullable=False)
 
     vote = Column(CHAR(1))
 
@@ -120,17 +121,26 @@ def get_last_message_id(group_id: int, session: session.Session) -> int:
 
 def vote_user(from_user_id: int, from_username: str, from_user_name: str,
               to_user_id: int, to_username: str, to_user_name: str,
-              group_id: int, vote: str, session: session.Session ) -> str:
+              group_id: int, vote: str, message_id: int, session: session.Session ) -> str:
     from_user = check_user(from_user_id, from_username, from_user_name, group_id, session)
 
     to_user = check_user(to_user_id, to_username, to_user_name, group_id, session)
+
+    a = session.query(UserVotes)\
+              .filter(UserVotes.message_id == message_id)\
+              .filter(UserVotes.from_user_id == from_user_id).first()
+    if session.query(UserVotes)\
+              .filter(UserVotes.message_id == message_id)\
+              .filter(UserVotes.from_user_id == from_user_id).first():
+        return ""
 
     if vote == "+":
         to_user.reputation = to_user.reputation + 1
     else:
         to_user.reputation = to_user.reputation - 1
 
-    uservote = UserVotes(from_user_id=from_user.user_id, to_user_id=to_user.user_id, vote=vote, group_id=group_id)
+    uservote = UserVotes(from_user_id=from_user.user_id, to_user_id=to_user.user_id,
+                         vote=vote, group_id=group_id, message_id=message_id)
 
     session.add(to_user)
     session.add(uservote)

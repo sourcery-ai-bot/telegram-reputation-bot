@@ -126,11 +126,11 @@ def vote_user(from_user_id: int, from_username: str, from_user_name: str,
     to_user = check_user(to_user_id, to_username, to_user_name, group_id, session)
 
     if vote == "+":
-        to_user.reputation += to_user.reputation
+        to_user.reputation = to_user.reputation + 1
     else:
-        to_user.reputation -= to_user.reputation
+        to_user.reputation = to_user.reputation - 1
 
-    uservote = UserVotes(from_user_id=from_user.id, to_user_id=to_user.id, vote=vote, group_id=group_id)
+    uservote = UserVotes(from_user_id=from_user.user_id, to_user_id=to_user.user_id, vote=vote, group_id=group_id)
 
     session.add(to_user)
     session.add(uservote)
@@ -144,12 +144,17 @@ def show_voted_rep(html_reply: str, group_id: int, session: session.Session, bot
     group = check_group(group_id, session)
 
     if group.last_message_id is not None:
+        print(group.last_message_id)
+        print("#2")
         bot.delete_message(chat_id=group_id, message_id=group.last_message_id)
         group.last_message_id = null()
         session.add(group)
         session.commit()
 
-    update.message.reply_html(html_reply)
+    group.last_message_id = update.message.reply_html(html_reply).message_id
+    session.add(group)
+    session.commit()
+
 
 
 # Leaderboards
@@ -159,6 +164,8 @@ def top_leaderboard(session, groupid) -> str:
 
 
 if __name__ == "__main__":
+
+    engine = create_engine("mysql+pymysql://admin:root@localhost/telegrambot")
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
 

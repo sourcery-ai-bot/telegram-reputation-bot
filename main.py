@@ -1,17 +1,21 @@
 import logging
 import json
-from telegram import Update, ForceReply
+
+from contextlib import contextmanager
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from telegram import Update, ForceReply, Bot
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+
+from user import vote_user, show_voted_rep
 
 # ===============CONFIG===============
 with open("config.json", "r") as f:
     data = json.load(f)
 
-CHATID = data["chatid"]
 TOKEN = data["token"]
-
-print(CHATID)
-print(TOKEN)
+bot = Bot(TOKEN)
 
 
 # Enable logging
@@ -26,57 +30,59 @@ logger = logging.getLogger(__name__)
 # Define a few command handlers. These usually take the two arguments update and
 # context.
 
-def votar_usuario(to_user_id: str, from_user_id: str) -> str:
-    return ""
+engine = create_engine("mysql+pymysql://admin:root@localhost/telegrambot")
+Session = sessionmaker(engine)
+
+@contextmanager
+def session_scope():
+    """Contextmanager for sqlalchemy sessions"""
+    session = Session()
+    try:
+        yield session
+        session.commit()
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
-def vote(update: Update, context: CallbackContextpdate):
+def vote(update: Update, context: CallbackContext):
     msg = update.message
 
-    if msg.text != "+" or msg.text != "-":
+    if msg is None:
         return
+    if msg.text is None:
+        return
+    if msg.text != "+" and msg.text != "-":
+        return
+
+    group_id = msg.chat.id
 
     from_user_id = msg.from_user.id
     from_username = msg.from_user.username
+    from_user_name = msg.from_user.name
+
     to_user_id = msg.reply_to_message.from_user.id
     to_username = msg.reply_to_message.from_user.username
+    to_user_name = msg.reply_to_message.from_user.name
 
     if msg.reply_to_message is None:
         pass
-    elif not msg.reply_to_message.text:
-        pass
-    elif (msg.reply_to_message.text == "-" or msg.reply_to_message.text == "+"):
-        msg.reply_text(text="No puedes votar votos")
-    elif msg.reply_to_message.text.startswith("/"):
-        msg.reply_text(text="No puedes votar comandos")
-    elif msg.reply_to_message.text.startswith("/"):
-        msg.reply_text(text="No puedes votar comandos")
     elif msg.reply_to_message.from_user.is_bot:
         msg.reply_text(text="No puedes votar a bots")
     elif from_user_id == to_user_id:
         msg.reply_text(text="No puedes votarte a ti mismo")
     else:
-        voto_html = votar_usuario(to_user_id, from_user_id, msg.text)
-        msg.reply_html(voto_html)
+        with session_scope() as session:
+            html_reply = vote_user(from_user_id, from_username, from_user_name,
+                      to_user_id, to_username, to_user_name,
+                      group_id, msg.text, session)
+
+            show_voted_rep(html_reply, group_id, session, bot, update)
 
 
-def start(update: Update, context: CallbackContext) -> None:
-    """Send a message when the command /start is issued."""
-    user = update.effective_user
-    update.message.reply_markdown_v2(
-            fr'Hi {user.mention_markdown_v2()}\!',
-            reply_markup=ForceReply(selective=True),
-            )
 
-
-def help_command(update: Update, context: CallbackContext) -> None:
-    """Send a message when the command /help is issued."""
-    update.message.reply_text('Help!')
-
-
-def echo(update: Update, context: CallbackContext) -> None:
-    """Echo the user message."""
-    update.message.reply_text(update.message.text)
 
 
 # ===============MAIN===============
@@ -88,11 +94,9 @@ def main() -> None:
     dispatcher = updater.dispatcher
 
     # on different commands - answer in Telegram
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("help", help_command))
 
     # on non command i.e message - echo the message on Telegram
-    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, echo))
+    dispatcher.add_handler(MessageHandler(Filters.text, vote))
 
     updater.start_polling()
     updater.idle()

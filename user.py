@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from sqlalchemy import Column, String, Integer, BigInteger,CHAR, ForeignKey, DateTime, create_engine, null
-from sqlalchemy.schema import ForeignKeyConstraint, Index
+from sqlalchemy import Column, String, Integer, BigInteger,Boolean, DateTime, create_engine, null, func
+from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, session
 
@@ -63,7 +63,7 @@ class UserVotes(Base):
     to_user_id = Column(BigInteger, nullable=False)
     message_id = Column(BigInteger, nullable=False)
 
-    vote = Column(CHAR(1))
+    vote = Column(Boolean)
 
     voted_at = Column(DateTime, default=datetime.now())
     __table_args__ = (
@@ -126,12 +126,10 @@ def vote_user(from_user_id: int, from_username: str, from_user_name: str,
 
     to_user = check_user(to_user_id, to_username, to_user_name, group_id, session)
 
-    a = session.query(UserVotes)\
-              .filter(UserVotes.message_id == message_id)\
-              .filter(UserVotes.from_user_id == from_user_id).first()
     if session.query(UserVotes)\
               .filter(UserVotes.message_id == message_id)\
-              .filter(UserVotes.from_user_id == from_user_id).first():
+              .filter(UserVotes.from_user_id == from_user_id)\
+              .filter(UserVotes.group_id == group_id).first():
         return ""
 
     if vote == "+":
@@ -139,9 +137,9 @@ def vote_user(from_user_id: int, from_username: str, from_user_name: str,
     else:
         to_user.reputation = to_user.reputation - 1
 
+
     uservote = UserVotes(from_user_id=from_user.user_id, to_user_id=to_user.user_id,
                          vote=vote, group_id=group_id, message_id=message_id)
-
     session.add(to_user)
     session.add(uservote)
 
@@ -168,8 +166,21 @@ def show_voted_rep(html_reply: str, group_id: int, session: session.Session, bot
 
 
 # Leaderboards
-def top_leaderboard(session, groupid) -> str:
+def top_leaderboard(session: session.Session, groupid: int, weeks=999) -> str:
+    # CHECK: hybrid_propery
 
+    session.execute(f'''
+SELECT
+	to_user_id, (count(vote) -
+		(SELECT count(*) from uservotes as ue
+		 	where ue.vote = "-" AND ue.to_user_id = uservotes.to_user_id
+		 					   AAND (date_add(ue.voted_at, INTERVAL {weeks} WEEK) > NOW()))
+	 )
+FROM uservotes
+WHERE vote = "+" AND (date_add(uservotes.voted_at, INTERVAL {weeks} WEEK) > NOW())
+GROUP BY to_user_id
+ORDER BY 2;
+            ''')
     return ""
 
 

@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from sqlalchemy import Column, String, Integer, BigInteger,Boolean, DateTime, create_engine, null, func
+from sqlalchemy import Column, String, Integer, BigInteger, SmallInteger, DateTime, create_engine, null, func
 from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, session
@@ -63,7 +63,7 @@ class UserVotes(Base):
     to_user_id = Column(BigInteger, nullable=False)
     message_id = Column(BigInteger, nullable=False)
 
-    vote = Column(Boolean)
+    vote = Column(SmallInteger)
 
     voted_at = Column(DateTime, default=datetime.now())
     __table_args__ = (
@@ -80,7 +80,11 @@ class UserVotes(Base):
     )
 
     def __str__(self):
-        return f"{self.fromuser} votó a {self.touser} con {self.vote}1"
+        if self.vote == 1:
+            return f"{self.fromuser} votó a {self.touser} con +1"
+        else:
+            return f"{self.fromuser} votó a {self.touser} con -1"
+
 
 
 # Check / Create
@@ -122,6 +126,7 @@ def get_last_message_id(group_id: int, session: session.Session) -> int:
 def vote_user(from_user_id: int, from_username: str, from_user_name: str,
               to_user_id: int, to_username: str, to_user_name: str,
               group_id: int, vote: str, message_id: int, session: session.Session ) -> str:
+    vote_input = -1
     from_user = check_user(from_user_id, from_username, from_user_name, group_id, session)
 
     to_user = check_user(to_user_id, to_username, to_user_name, group_id, session)
@@ -134,12 +139,13 @@ def vote_user(from_user_id: int, from_username: str, from_user_name: str,
 
     if vote == "+":
         to_user.reputation = to_user.reputation + 1
+        vote_input = 1
     else:
         to_user.reputation = to_user.reputation - 1
 
 
     uservote = UserVotes(from_user_id=from_user.user_id, to_user_id=to_user.user_id,
-                         vote=vote, group_id=group_id, message_id=message_id)
+                         vote=vote_input, group_id=group_id, message_id=message_id)
     session.add(to_user)
     session.add(uservote)
 
@@ -152,8 +158,6 @@ def show_voted_rep(html_reply: str, group_id: int, session: session.Session, bot
     group = check_group(group_id, session)
 
     if group.last_message_id is not None:
-        print(group.last_message_id)
-        print("#2")
         bot.delete_message(chat_id=group_id, message_id=group.last_message_id)
         group.last_message_id = null()
         session.add(group)
@@ -166,21 +170,19 @@ def show_voted_rep(html_reply: str, group_id: int, session: session.Session, bot
 
 
 # Leaderboards
-def top_leaderboard(session: session.Session, groupid: int, weeks=999) -> str:
+def top_leaderboard(session: session.Session, groupid: int, weeks: int, top_show: int) -> str:
     # CHECK: hybrid_propery
 
-    session.execute(f'''
-SELECT
-	to_user_id, (count(vote) -
-		(SELECT count(*) from uservotes as ue
-		 	where ue.vote = "-" AND ue.to_user_id = uservotes.to_user_id
-		 					   AAND (date_add(ue.voted_at, INTERVAL {weeks} WEEK) > NOW()))
-	 )
-FROM uservotes
-WHERE vote = "+" AND (date_add(uservotes.voted_at, INTERVAL {weeks} WEEK) > NOW())
-GROUP BY to_user_id
-ORDER BY 2;
-            ''')
+    weeks_ago = datetime.now() - timedelta(weeks=weeks)
+
+    leaderboard = session.query(UserVotes.to_user_id, func.sum(UserVotes.vote))\
+                         .filter(UserVotes.group_id == groupid)\
+                         .filter(UserVotes.voted_at > weeks_ago)\
+                         .group_by(UserVotes.to_user_id)\
+                         .order_by(func.sum(UserVotes.vote).desc()).limit(top_show).all()
+
+    for x in leaderboard:
+        user = session.query(User).filter(User.user_id == x[0]).first()
     return ""
 
 

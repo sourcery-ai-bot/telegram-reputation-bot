@@ -5,10 +5,10 @@ from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from telegram import Update, ForceReply, Bot
+from telegram import Update, Bot
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
-from user import vote_user, show_voted_rep
+from user import vote_user, show_voted_rep, top_leaderboard
 
 # ===============CONFIG===============
 with open("config.json", "r") as f:
@@ -49,7 +49,6 @@ def session_scope():
 
 def vote(update: Update, context: CallbackContext):
     msg = update.message
-    print(msg.reply_to_message)
 
     if msg is None:
         return
@@ -82,9 +81,25 @@ def vote(update: Update, context: CallbackContext):
             if html_reply:
                 show_voted_rep(html_reply, group_id, session, bot, update)
 
+def top_rep(update: Update, context: CallbackContext):
+    limit = 10
+    try:
+        limit = int(context.args[0])
+    except ValueError:
+        update.message.reply_html("Tienes que poner un número con el límite de Usuarios a mostrar, o no poner nada para dejar 10 por defecto")
+        return
+    with session_scope() as session:
+        top_leaderboard(session, update.message.chat.id, 9999, limit)
 
-
-
+def top_rep_weekly(update: Update, context: CallbackContext):
+    time_limit = 1
+    try:
+        time_limit = int(context.args[0])
+    except ValueError:
+        update.message.reply_html("Tienes que poner un número con las semanas a mostrar, por defecto es 1")
+        return
+    with session_scope() as session:
+        top_leaderboard(session, update.message.chat.id, time_limit, 20)
 
 # ===============MAIN===============
 
@@ -94,7 +109,8 @@ def main() -> None:
     # Get the dispatcher to register handlers
     dispatcher = updater.dispatcher
 
-    # on different commands - answer in Telegram
+    dispatcher.add_handler(CommandHandler("toprep", top_rep))
+    dispatcher.add_handler(CommandHandler("repweekly", top_rep_weekly))
 
     # on non command i.e message - echo the message on Telegram
     dispatcher.add_handler(MessageHandler(Filters.text, vote))

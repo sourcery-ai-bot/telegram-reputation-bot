@@ -9,12 +9,10 @@ from telegram import Update, Bot
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
 from user import vote_user, show_voted_rep, top_leaderboard
+from config import TOKEN, DB, ENGINE
 
 # ===============CONFIG===============
-with open("config.json", "r") as f:
-    data = json.load(f)
 
-TOKEN = data["token"]
 bot = Bot(TOKEN)
 
 
@@ -30,7 +28,7 @@ logger = logging.getLogger(__name__)
 # Define a few command handlers. These usually take the two arguments update and
 # context.
 
-engine = create_engine("mysql+pymysql://admin:root@localhost/telegrambot")
+engine = create_engine(f"{ENGINE}://{DB}")
 Session = sessionmaker(engine)
 
 @contextmanager

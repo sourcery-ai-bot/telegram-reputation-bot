@@ -7,7 +7,8 @@ from sqlalchemy.orm import relationship, session
 
 from telegram import Bot, Update
 
-engine = create_engine("mysql+pymysql://admin:root@localhost/telegrambot")
+from config import DB, ENGINE
+
 Base = declarative_base()
 
 class Group(Base):
@@ -170,7 +171,7 @@ def show_voted_rep(html_reply: str, group_id: int, session: session.Session, bot
 
 
 # Leaderboards
-def top_leaderboard(session: session.Session, groupid: int, weeks: int, top_show: int, update: Update) -> str:
+def top_leaderboard(session: session.Session, groupid: int, weeks: int, top_show: int, update: Update) -> None:
     # CHECK: hybrid_propery
 
     weeks_ago = datetime.now() - timedelta(weeks=weeks)
@@ -196,7 +197,7 @@ def top_leaderboard(session: session.Session, groupid: int, weeks: int, top_show
 
 if __name__ == "__main__":
 
-    engine = create_engine("mysql+pymysql://admin:root@localhost/telegrambot")
+    engine = create_engine(f"{ENGINE}://{DB}")
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
 

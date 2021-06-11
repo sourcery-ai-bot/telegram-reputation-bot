@@ -9,7 +9,7 @@ from telegram import Update, Bot
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
 from user import vote_user, show_voted_rep, top_leaderboard
-from config import TOKEN, DB, ENGINE
+from config import TOKEN, DB
 
 # ===============CONFIG===============
 
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 # Define a few command handlers. These usually take the two arguments update and
 # context.
 
-engine = create_engine(f"{ENGINE}://{DB}")
+engine = create_engine(DB)
 Session = sessionmaker(engine)
 
 @contextmanager

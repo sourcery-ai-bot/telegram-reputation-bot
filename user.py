@@ -7,7 +7,7 @@ from sqlalchemy.orm import relationship, session
 
 from telegram import Bot, Update
 
-from config import DB, ENGINE
+from config import DB
 
 Base = declarative_base()
 
@@ -197,7 +197,7 @@ def top_leaderboard(session: session.Session, groupid: int, weeks: int, top_show
 
 if __name__ == "__main__":
 
-    engine = create_engine(f"{ENGINE}://{DB}")
+    engine = create_engine(DB)
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
 

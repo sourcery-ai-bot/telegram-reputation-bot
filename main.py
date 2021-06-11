@@ -1,12 +1,13 @@
 import logging
-import json
+import sys
 
 from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from telegram import Update, Bot
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram.ext import Updater, CommandHandler, MessageHandler,\
+                         Filters, CallbackContext
 
 from user import vote_user, show_voted_rep, top_leaderboard
 from config import TOKEN, DB
@@ -18,7 +19,8 @@ bot = Bot(TOKEN)
 
 # Enable logging
 logging.basicConfig(
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=logging.INFO
         )
 
 logger = logging.getLogger(__name__)
@@ -31,6 +33,7 @@ logger = logging.getLogger(__name__)
 engine = create_engine(DB)
 Session = sessionmaker(engine)
 
+
 @contextmanager
 def session_scope():
     """Contextmanager for sqlalchemy sessions"""
@@ -38,21 +41,21 @@ def session_scope():
     try:
         yield session
         session.commit()
-    except:
+    except Exception:
         session.rollback()
         raise
     finally:
         session.close()
 
 
-def vote(update: Update, context: CallbackContext):
+def vote(update: Update, _unused: CallbackContext):
     msg = update.message
 
     if msg is None:
         return
     if msg.text is None:
         return
-    if msg.text != "+" and msg.text != "-":
+    if not msg in ("+", "-"):
         return
 
     group_id = msg.chat.id
@@ -74,34 +77,43 @@ def vote(update: Update, context: CallbackContext):
     else:
         with session_scope() as session:
             html_reply = vote_user(from_user_id, from_username, from_user_name,
-                      to_user_id, to_username, to_user_name,
-                      group_id, msg.text, msg.reply_to_message.message_id, session)
+                                   to_user_id, to_username, to_user_name,
+                                   group_id, msg.text,
+                                   msg.reply_to_message.message_id, session)
             if html_reply:
                 show_voted_rep(html_reply, group_id, session, bot, update)
+
 
 def top_rep(update: Update, context: CallbackContext):
     try:
         limit = int(context.args[0])
     except ValueError:
-        update.message.reply_html("Tienes que poner un número con el límite de Usuarios a mostrar, o no poner nada para dejar 10 por defecto")
+        update.message.reply_html("Tienes que poner un número con el límite de "
+                                  "Usuarios a mostrar, o no poner nada "
+                                  "para dejar 10 por defecto")
         return
     except IndexError:
         limit = 10
     with session_scope() as session:
         top_leaderboard(session, update.message.chat.id, 9999, limit, update)
 
+
 def top_rep_weekly(update: Update, context: CallbackContext):
     try:
         time_limit = int(context.args[0])
     except ValueError:
-        update.message.reply_html("Tienes que poner un número con las semanas a mostrar, por defecto es 1")
+        update.message.reply_html("Tienes que poner un número con "
+                                  "las semanas a mostrar, por defecto es 1")
         return
     except IndexError:
         time_limit = 1
     with session_scope() as session:
-        top_leaderboard(session, update.message.chat.id, time_limit, 20, update)
+        top_leaderboard(session, update.message.chat.id,
+                        time_limit, 20, update)
+
 
 # ===============MAIN===============
+
 
 def main() -> None:
     updater = Updater(TOKEN)
@@ -118,8 +130,9 @@ def main() -> None:
     updater.start_polling()
     updater.idle()
 
+
 if __name__ == "__main__":
     try:
         main()
-    except:
-        exit(0)
+    except Exception:
+        sys.exit(0)

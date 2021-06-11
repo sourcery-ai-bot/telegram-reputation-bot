@@ -1,30 +1,26 @@
 import logging
 import sys
-
 from contextlib import contextmanager
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from telegram import Bot, Update
+from telegram.ext import (CallbackContext, CommandHandler, Filters,
+                          MessageHandler, Updater)
 
-from telegram import Update, Bot
-from telegram.ext import Updater, CommandHandler, MessageHandler,\
-                         Filters, CallbackContext
-
-from user import vote_user, show_voted_rep, top_leaderboard
-from config import TOKEN, DB
+from config import DB, TOKEN
+from user import show_voted_rep, top_leaderboard, vote_user
 
 # ===============CONFIG===============
 
 bot = Bot(TOKEN)
 
-
 # Enable logging
 logging.basicConfig(
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        level=logging.INFO
-        )
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO)
 
 logger = logging.getLogger(__name__)
-
 
 # ===============FUNCTIONS===============
 # Define a few command handlers. These usually take the two arguments update and
@@ -88,9 +84,10 @@ def top_rep(update: Update, context: CallbackContext):
     try:
         limit = int(context.args[0])
     except ValueError:
-        update.message.reply_html("Tienes que poner un número con el límite de "
-                                  "Usuarios a mostrar, o no poner nada "
-                                  "para dejar 10 por defecto")
+        update.message.reply_html(
+            "Tienes que poner un número con el límite de "
+            "Usuarios a mostrar, o no poner nada "
+            "para dejar 10 por defecto")
         return
     except IndexError:
         limit = 10
@@ -108,8 +105,8 @@ def top_rep_weekly(update: Update, context: CallbackContext):
     except IndexError:
         time_limit = 1
     with session_scope() as session:
-        top_leaderboard(session, update.message.chat.id,
-                        time_limit, 20, update)
+        top_leaderboard(session, update.message.chat.id, time_limit, 20,
+                        update)
 
 
 # ===============MAIN===============

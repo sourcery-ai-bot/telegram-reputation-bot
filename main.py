@@ -51,7 +51,7 @@ def vote(update: Update, _unused: CallbackContext):
         return
     if msg.text is None:
         return
-    if not msg in ("+", "-"):
+    if msg.text not in ("+", "-"):
         return
 
     group_id = msg.chat.id

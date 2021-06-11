@@ -52,8 +52,6 @@ class User(Base):
     __table_args__ = (ForeignKeyConstraint(['group_id'], ['group.group_id'],
                                            name="fk_group_id"), )
 
-    def mention(self):
-        return f'<a href="tg://user?id={self.user_id}">{self.name}</a>'
 
     def __str__(self):
         return f'<a href="tg://user?id={self.user_id}">'\
@@ -89,6 +87,9 @@ class UserVotes(Base):
             return f"{self.fromuser} votó a {self.touser} con +1"
 
         return f"{self.fromuser} votó a {self.touser} con -1"
+
+def mention(user: User) -> str:
+    return f'<a href="tg://user?id={user.user_id}">{user.name}</a>'
 
 
 # Check / Create
@@ -133,7 +134,6 @@ def vote_user(from_user_id: int, from_username: str, from_user_name: str,
               group_id: int, vote: str, message_id: int,
               session_func: session.Session) -> str:
     vote_input = -1
-    print("VOTO")
     from_user = check_user(from_user_id, from_username, from_user_name,
                            group_id, session_func)
 
@@ -163,7 +163,6 @@ def vote_user(from_user_id: int, from_username: str, from_user_name: str,
 
     session_func.commit()
 
-    print("VOTO2")
     return str(uservote)
 
 
@@ -200,8 +199,9 @@ def top_leaderboard(session_func: session.Session, groupid: int, weeks: int,
 
     for index, user in enumerate(leaderboard):
         try:
+            user_o = session_func.query(User).filter(User.user_id == user[0]).first()
             rep_leaderboard = user[1]
-            leaderboard_str += f"{index + 1}º - {user.mention()} - {rep_leaderboard}\n"
+            leaderboard_str += f"{index + 1}º - {mention(user_o)} - {rep_leaderboard}\n"
         except Exception as e:
             print(e)
             continue

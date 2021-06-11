@@ -119,4 +119,7 @@ def main() -> None:
     updater.idle()
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except:
+        exit(0)

@@ -133,6 +133,7 @@ def vote_user(from_user_id: int, from_username: str, from_user_name: str,
               group_id: int, vote: str, message_id: int,
               session_func: session.Session) -> str:
     vote_input = -1
+    print("VOTO")
     from_user = check_user(from_user_id, from_username, from_user_name,
                            group_id, session_func)
 
@@ -162,6 +163,7 @@ def vote_user(from_user_id: int, from_username: str, from_user_name: str,
 
     session_func.commit()
 
+    print("VOTO2")
     return str(uservote)
 
 
@@ -200,7 +202,8 @@ def top_leaderboard(session_func: session.Session, groupid: int, weeks: int,
         try:
             rep_leaderboard = user[1]
             leaderboard_str += f"{index + 1}º - {user.mention()} - {rep_leaderboard}\n"
-        except Exception:
+        except Exception as e:
+            print(e)
             continue
 
     if leaderboard_str:

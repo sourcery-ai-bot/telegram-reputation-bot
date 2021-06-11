@@ -82,24 +82,26 @@ def vote(update: Update, context: CallbackContext):
                 show_voted_rep(html_reply, group_id, session, bot, update)
 
 def top_rep(update: Update, context: CallbackContext):
-    limit = 10
     try:
         limit = int(context.args[0])
     except ValueError:
         update.message.reply_html("Tienes que poner un número con el límite de Usuarios a mostrar, o no poner nada para dejar 10 por defecto")
         return
+    except IndexError:
+        limit = 10
     with session_scope() as session:
-        top_leaderboard(session, update.message.chat.id, 9999, limit)
+        top_leaderboard(session, update.message.chat.id, 9999, limit, update)
 
 def top_rep_weekly(update: Update, context: CallbackContext):
-    time_limit = 1
     try:
         time_limit = int(context.args[0])
     except ValueError:
         update.message.reply_html("Tienes que poner un número con las semanas a mostrar, por defecto es 1")
         return
+    except IndexError:
+        time_limit = 1
     with session_scope() as session:
-        top_leaderboard(session, update.message.chat.id, time_limit, 20)
+        top_leaderboard(session, update.message.chat.id, time_limit, 20, update)
 
 # ===============MAIN===============
 

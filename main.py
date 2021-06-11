@@ -17,8 +17,8 @@ bot = Bot(TOKEN)
 
 # Enable logging
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO)
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
 
 logger = logging.getLogger(__name__)
 
@@ -72,10 +72,18 @@ def vote(update: Update, _unused: CallbackContext):
         msg.reply_text(text="No puedes votarte a ti mismo")
     else:
         with session_scope() as session:
-            html_reply = vote_user(from_user_id, from_username, from_user_name,
-                                   to_user_id, to_username, to_user_name,
-                                   group_id, msg.text,
-                                   msg.reply_to_message.message_id, session)
+            html_reply = vote_user(
+                from_user_id,
+                from_username,
+                from_user_name,
+                to_user_id,
+                to_username,
+                to_user_name,
+                group_id,
+                msg.text,
+                msg.reply_to_message.message_id,
+                session,
+            )
             if html_reply:
                 show_voted_rep(html_reply, group_id, session, bot, update)
 
@@ -87,7 +95,8 @@ def top_rep(update: Update, context: CallbackContext):
         update.message.reply_html(
             "Tienes que poner un número con el límite de "
             "Usuarios a mostrar, o no poner nada "
-            "para dejar 10 por defecto")
+            "para dejar 10 por defecto"
+        )
         return
     except IndexError:
         limit = 10
@@ -99,14 +108,14 @@ def top_rep_weekly(update: Update, context: CallbackContext):
     try:
         time_limit = int(context.args[0])
     except ValueError:
-        update.message.reply_html("Tienes que poner un número con "
-                                  "las semanas a mostrar, por defecto es 1")
+        update.message.reply_html(
+            "Tienes que poner un número con " "las semanas a mostrar, por defecto es 1"
+        )
         return
     except IndexError:
         time_limit = 1
     with session_scope() as session:
-        top_leaderboard(session, update.message.chat.id, time_limit, 20,
-                        update)
+        top_leaderboard(session, update.message.chat.id, time_limit, 20, update)
 
 
 # ===============MAIN===============

@@ -1,11 +1,10 @@
 from datetime import datetime, timedelta
 
-from sqlalchemy import Column, String, Integer, BigInteger,\
-                       SmallInteger, DateTime, create_engine, null, func
-from sqlalchemy.schema import ForeignKeyConstraint
+from sqlalchemy import (BigInteger, Column, DateTime, Integer, SmallInteger,
+                        String, create_engine, func, null)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, session
-
+from sqlalchemy.schema import ForeignKeyConstraint
 from telegram import Bot, Update
 
 from config import DB

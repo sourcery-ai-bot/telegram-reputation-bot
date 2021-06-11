@@ -1,16 +1,15 @@
 import logging
 import sys
-
 from contextlib import contextmanager
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from telegram import Bot, Update
+from telegram.ext import (CallbackContext, CommandHandler, Filters,
+                          MessageHandler, Updater)
 
-from telegram import Update, Bot
-from telegram.ext import Updater, CommandHandler, MessageHandler,\
-                         Filters, CallbackContext
-
-from user import vote_user, show_voted_rep, top_leaderboard
-from config import TOKEN, DB
+from config import DB, TOKEN
+from user import show_voted_rep, top_leaderboard, vote_user
 
 # ===============CONFIG===============
 

@@ -55,7 +55,7 @@ class User(Base):
 
     def __str__(self):
         return f'<a href="tg://user?id={self.user_id}">'\
-               '{self.name}</a> [{self.reputation}]'
+               f'{self.name}</a> [{self.reputation}]'
 
 
 class UserVotes(Base):

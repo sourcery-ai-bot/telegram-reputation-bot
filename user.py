@@ -170,7 +170,7 @@ def show_voted_rep(html_reply: str, group_id: int, session: session.Session, bot
 
 
 # Leaderboards
-def top_leaderboard(session: session.Session, groupid: int, weeks: int, top_show: int) -> str:
+def top_leaderboard(session: session.Session, groupid: int, weeks: int, top_show: int, update: Update) -> str:
     # CHECK: hybrid_propery
 
     weeks_ago = datetime.now() - timedelta(weeks=weeks)
@@ -181,9 +181,17 @@ def top_leaderboard(session: session.Session, groupid: int, weeks: int, top_show
                          .group_by(UserVotes.to_user_id)\
                          .order_by(func.sum(UserVotes.vote).desc()).limit(top_show).all()
 
-    for x in leaderboard:
-        user = session.query(User).filter(User.user_id == x[0]).first()
-    return ""
+    leaderboard_str = ""
+    for x in range(len(leaderboard)):
+        user = session.query(User).filter(User.user_id == leaderboard[x][0]).first()
+        rep_leaderboard = leaderboard[x][1]
+        leaderboard_str += f"{x + 1}º - {str(user)} - {str(rep_leaderboard)}\n"
+    if leaderboard_str:
+        update.message.reply_html(leaderboard_str)
+    else:
+        update.message.reply_html("No hay usuarios en la lista")
+
+
 
 
 if __name__ == "__main__":

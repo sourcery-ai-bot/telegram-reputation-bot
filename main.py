@@ -1,5 +1,4 @@
 import logging
-import sys
 from contextlib import contextmanager
 
 from sqlalchemy import create_engine
@@ -109,7 +108,7 @@ def top_rep_weekly(update: Update, context: CallbackContext):
         time_limit = int(context.args[0])
     except ValueError:
         update.message.reply_html(
-            "Tienes que poner un número con " "las semanas a mostrar, por defecto es 1"
+            "Tienes que poner un número con las semanas a mostrar, por defecto es 1"
         )
         return
     except IndexError:
@@ -127,6 +126,7 @@ def main() -> None:
     # Get the dispatcher to register handlers
     dispatcher = updater.dispatcher
 
+    # Commands
     dispatcher.add_handler(CommandHandler("toprep", top_rep))
     dispatcher.add_handler(CommandHandler("repweekly", top_rep_weekly))
 
@@ -138,7 +138,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception:
-        sys.exit(0)
+    main()

@@ -224,7 +224,7 @@ def top_leaderboard(
         .filter(UserVotes.group_id == groupid)
         .filter(UserVotes.voted_at > weeks_ago)
         .group_by(UserVotes.to_user_id)
-        .order_by(func.sum(UserVotes.vote).desc())
+        .order_by(func.sum(UserVotes.vote).desc(), UserVotes.to_user_id)
         .limit(top_show)
         .all()
     )

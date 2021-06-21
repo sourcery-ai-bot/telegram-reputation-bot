@@ -3,28 +3,25 @@ from contextlib import contextmanager
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from telegram import Bot, Update
+from telegram import Update
 from telegram.ext import (CallbackContext, CommandHandler, Filters,
                           MessageHandler, Updater)
 
 from config import DB, TOKEN
-from user import show_voted_rep, top_leaderboard, vote_user
+from funcs import show_voted_rep, top_leaderboard, vote_user
+from models import User
 
-# ===============CONFIG===============
-
-bot = Bot(TOKEN)
-
-# Enable logging
+# ===============Logging===============
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
-)
+    format=
+    '%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+    datefmt='%Y-%m-%d:%H:%M:%S',
+    level=logging.INFO,
+    filename="app.log")
 
 logger = logging.getLogger(__name__)
 
 # ===============FUNCTIONS===============
-# Define a few command handlers. These usually take the two arguments update and
-# context.
-
 engine = create_engine(DB)
 Session = sessionmaker(engine)
 
@@ -37,13 +34,16 @@ def session_scope():
         yield session
         session.commit()
     except Exception:
+        logger.exception("SQL problem")
         session.rollback()
-        raise
     finally:
         session.close()
 
 
-def vote(update: Update, _unused: CallbackContext):
+def vote(
+        update: Update,
+        _unused: CallbackContext  # type: ignore
+):
     msg = update.message
 
     if msg is None:
@@ -55,47 +55,43 @@ def vote(update: Update, _unused: CallbackContext):
 
     group_id = msg.chat.id
 
-    from_user_id = msg.from_user.id
-    from_username = msg.from_user.username
-    from_user_name = msg.from_user.name
-
-    to_user_id = msg.reply_to_message.from_user.id
-    to_username = msg.reply_to_message.from_user.username
-    to_user_name = msg.reply_to_message.from_user.name
-
     if msg.reply_to_message is None:
         pass
     elif msg.reply_to_message.from_user.is_bot:
         msg.reply_text(text="No puedes votar a bots")
-    elif from_user_id == to_user_id:
+    elif msg.from_user.id == msg.reply_to_message.from_user.id:
         msg.reply_text(text="No puedes votarte a ti mismo")
     else:
+        from_user = User(user_id=msg.from_user.id,
+                         username=msg.from_user.name,
+                         name="",
+                         group_id=group_id)
+        to_user = User(user_id=msg.reply_to_message.from_user.id,
+                       username=msg.reply_to_message.from_user.name,
+                       name="",
+                       group_id=group_id)
+
         with session_scope() as session:
             html_reply = vote_user(
-                from_user_id,
-                from_username,
-                from_user_name,
-                to_user_id,
-                to_username,
-                to_user_name,
+                from_user,
+                to_user,
                 group_id,
                 msg.text,
                 msg.reply_to_message.message_id,
                 session,
             )
             if html_reply:
-                show_voted_rep(html_reply, group_id, session, bot, update)
+                show_voted_rep(html_reply, group_id, session, update)
 
 
-def top_rep(update: Update, context: CallbackContext):
+def top_rep(update: Update, context: CallbackContext) -> None:
     try:
         limit = int(context.args[0])
     except ValueError:
         update.message.reply_html(
             "Tienes que poner un número con el límite de "
             "Usuarios a mostrar, o no poner nada "
-            "para dejar 10 por defecto"
-        )
+            "para dejar 10 por defecto")
         return
     except IndexError:
         limit = 10
@@ -103,7 +99,7 @@ def top_rep(update: Update, context: CallbackContext):
         top_leaderboard(session, update.message.chat.id, 9999, limit, update)
 
 
-def top_rep_weekly(update: Update, context: CallbackContext):
+def top_rep_weekly(update: Update, context: CallbackContext) -> None:
     try:
         time_limit = int(context.args[0])
     except ValueError:
@@ -114,25 +110,27 @@ def top_rep_weekly(update: Update, context: CallbackContext):
     except IndexError:
         time_limit = 1
     with session_scope() as session:
-        top_leaderboard(session, update.message.chat.id, time_limit, 20, update)
+        top_leaderboard(session, update.message.chat.id, time_limit, 20,
+                        update)
 
 
-# ===============MAIN===============
+def config_rep(update: Update, _unused: CallbackContext) -> None:
+    pass
 
 
 def main() -> None:
     updater = Updater(TOKEN)
 
-    # Get the dispatcher to register handlers
     dispatcher = updater.dispatcher
 
     # Commands
     dispatcher.add_handler(CommandHandler("toprep", top_rep))
-    dispatcher.add_handler(CommandHandler("repweekly", top_rep_weekly))
+    dispatcher.add_handler(CommandHandler("weeklyrep", top_rep_weekly))
+    dispatcher.add_handler(CommandHandler("configrep", config_rep))
 
-    # on non command i.e message - echo the message on Telegram
     dispatcher.add_handler(MessageHandler(Filters.text, vote))
 
+    # Start the bot
     updater.start_polling()
     updater.idle()
 
